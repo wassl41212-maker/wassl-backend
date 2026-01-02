@@ -47,7 +47,6 @@ const userSchema = new mongoose.Schema(
     },
     password: { type: String, required: true, minlength: 6 },
 
-    // ✅ Forgot password (OTP)
     resetCodeHash: { type: String, default: null },
     resetCodeExp: { type: Date, default: null },
   },
@@ -56,9 +55,7 @@ const userSchema = new mongoose.Schema(
 
 const User = mongoose.model("User", userSchema, "users");
 
-// ==============================
 // ✅ JWT Auth Middleware
-// ==============================
 const auth = (req, res, next) => {
   try {
     const header = req.headers.authorization || "";
@@ -74,9 +71,7 @@ const auth = (req, res, next) => {
   }
 };
 
-// ==============================
 // ✅ Auth: Register / Login
-// ==============================
 app.post("/api/auth/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -143,9 +138,7 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
-// ==============================
 // ✅ Profile: GET/PUT /api/users/me
-// ==============================
 app.get("/api/users/me", auth, async (req, res) => {
   try {
     const user = await User.findById(req.userId).select("_id name email");
@@ -192,9 +185,7 @@ app.put("/api/users/me", auth, async (req, res) => {
   }
 });
 
-// ==============================
 // ✅ Forgot Password: POST /api/auth/forgot-password
-// ==============================
 const buildMailer = () => {
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env;
   if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) return null;
@@ -218,10 +209,8 @@ app.post("/api/auth/forgot-password", async (req, res) => {
 
     const user = await User.findOne({ email });
 
-    // ✅ عشان واجهتك تعرف هل الإيميل موجود
     if (!user) return res.json({ ok: true, exists: false });
 
-    // ✅ كود 6 أرقام + صلاحية 10 دقائق
     const code = String(Math.floor(100000 + Math.random() * 900000));
     const hash = await bcrypt.hash(code, 10);
     const exp = new Date(Date.now() + 10 * 60 * 1000);
@@ -230,7 +219,6 @@ app.post("/api/auth/forgot-password", async (req, res) => {
     user.resetCodeExp = exp;
     await user.save();
 
-    // ✅ إرسال بالإيميل (لو SMTP متوفر)
     if (mailer) {
       const from = process.env.SMTP_FROM || process.env.SMTP_USER;
       await mailer.sendMail({
@@ -242,7 +230,6 @@ app.post("/api/auth/forgot-password", async (req, res) => {
       return res.json({ ok: true, exists: true, message: "Code sent ✅" });
     }
 
-    // ✅ Dev only (بدون SMTP)
     return res.json({
       ok: true,
       exists: true,
@@ -254,9 +241,7 @@ app.post("/api/auth/forgot-password", async (req, res) => {
   }
 });
 
-// ==============================
 // ✅ Reset Password: POST /api/auth/reset-password
-// ==============================
 app.post("/api/auth/reset-password", async (req, res) => {
   try {
     const email = String(req.body?.email || "").trim().toLowerCase();
